@@ -17,5 +17,5 @@ Diga "Avalon" para o sistema entrar no modo de escuta
 Fale seu comando e aguarde a resposta do AVALON.
 
 📄 Licença
-Este projeto é de uso pessoal e futuramento para integrar em sistemas de automação residencial. Desenvolvido para demonstrar a integração entre IA e casas inteligentes.
+Este projeto é de uso pessoal e futuramento sera escalado para integrar sistemas de automação residencial. Desenvolvido para demonstrar a integração entre IA e casas inteligentes.
 API Key da NVidia com o modelo LLama.
