@@ -12,7 +12,7 @@ Clique em INICIAR ESCUTA para ativar o microfone.
 
 O núcleo passará do modo Dourado (Standby) para o Verde (Captura/Processamento).
 
-Diga avalon para o sistema entrar no modo de escuta
+Diga "Avalon" para o sistema entrar no modo de escuta
 
 Fale seu comando e aguarde a resposta do AVALON.
 
