@@ -4,8 +4,7 @@ import os
 
 # Carrega o modelo diretamente na VRAM da RTX 3050
 print("Iniciando o sistema neural do AVALON...")
-model = WhisperModel("base", device="cpu", compute_type="int8")
-
+model = WhisperModel("base", device="cuda", compute_type="float16")
 def ouvir_e_transcrever():
     recognizer = sr.Recognizer()
     arquivo_temp = "temp_avalon.wav"
