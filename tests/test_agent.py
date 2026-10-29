@@ -127,6 +127,88 @@ class ComputerTests(unittest.TestCase):
             result=self.call('desktop_type',text='command\n')
             self.assertIn('error',result.data); desktop.assert_not_called()
 
+    def enable_desktop(self):
+        self.tools.settings=replace(self.settings,desktop_enabled=True,vision_enabled=True)
+
+    def test_no_capture_is_blocked_even_with_small_monotonic_clock(self):
+        self.enable_desktop()
+        with patch('avalon.computer.time.monotonic',return_value=10), patch.object(self.tools,'_desktop') as desktop:
+            result=self.call('desktop_click',x=10,y=10)
+        self.assertTrue(result.denied)
+        desktop.assert_not_called()
+        self.assertEqual(self.approve.calls,[])
+
+    def test_real_capture_at_time_zero_is_valid(self):
+        self.enable_desktop(); self.tools.screen_at=0.0
+        with patch('avalon.computer.time.monotonic',return_value=10), patch.object(self.tools,'_desktop') as desktop, patch.object(self.cancel,'wait',return_value=False):
+            desktop.return_value.onScreen.return_value=True
+            result=self.call('desktop_click',x=10,y=10)
+        self.assertTrue(result.data.get('input_sent'))
+        desktop.return_value.click.assert_called_once_with(10,10)
+
+    def test_capture_expiring_during_review_cannot_click(self):
+        self.enable_desktop(); self.tools.screen_at=100
+        clock=[110]
+        self.approve.hook=lambda:clock.__setitem__(0,160)
+        with patch('avalon.computer.time.monotonic',side_effect=lambda:clock[0]), patch.object(self.tools,'_desktop') as desktop, patch.object(self.cancel,'wait',return_value=False):
+            desktop.return_value.onScreen.return_value=True
+            result=self.call('desktop_click',x=10,y=10)
+        self.assertTrue(result.denied)
+        desktop.return_value.click.assert_not_called()
+        self.assertIsNone(self.tools.screen_at)
+
+    def test_capture_expiring_during_focus_delay_cannot_click(self):
+        self.enable_desktop(); self.tools.screen_at=100
+        clock=[144]
+        def wait(seconds):
+            clock[0]=146
+            return False
+        with patch('avalon.computer.time.monotonic',side_effect=lambda:clock[0]), patch.object(self.tools,'_desktop') as desktop, patch.object(self.cancel,'wait',side_effect=wait):
+            desktop.return_value.onScreen.return_value=True
+            result=self.call('desktop_click',x=10,y=10)
+        self.assertTrue(result.denied)
+        desktop.return_value.click.assert_not_called()
+
+    def test_cancel_after_review_prevents_all_input(self):
+        self.enable_desktop(); self.tools.screen_at=100
+        self.approve.hook=self.cancel.set
+        with patch('avalon.computer.time.monotonic',return_value=110), patch.object(self.tools,'_desktop') as desktop:
+            result=self.call('desktop_type',text='hello')
+        self.assertTrue(result.denied)
+        desktop.return_value.write.assert_not_called()
+
+    def test_stop_typing_prevents_remaining_chunks(self):
+        self.enable_desktop(); self.tools.screen_at=100
+        with patch('avalon.computer.time.monotonic',return_value=110), patch.object(self.tools,'_desktop') as desktop, patch.object(self.cancel,'wait',return_value=False):
+            desktop.return_value.write.side_effect=lambda *args,**kwargs:self.cancel.set()
+            result=self.call('desktop_type',text='a'*40)
+        self.assertTrue(result.denied)
+        self.assertTrue(result.data['interrupted'])
+        self.assertEqual(result.data['characters_sent'],8)
+        desktop.return_value.write.assert_called_once_with('a'*8,interval=.01)
+        self.assertIsNone(self.tools.screen_at)
+
+    def test_typing_preserves_text_order_without_cancellation(self):
+        self.enable_desktop(); self.tools.screen_at=100
+        text='abcdefgh12345678XYZ'
+        with patch('avalon.computer.time.monotonic',return_value=110), patch.object(self.tools,'_desktop') as desktop, patch.object(self.cancel,'wait',return_value=False):
+            result=self.call('desktop_type',text=text)
+        pieces=[call.args[0] for call in desktop.return_value.write.call_args_list]
+        self.assertEqual(''.join(pieces),text)
+        self.assertTrue(all(len(piece)<=8 for piece in pieces))
+        self.assertEqual(result.data['characters_sent'],len(text))
+        self.assertFalse(result.denied)
+        self.assertIsNone(self.tools.screen_at)
+
+    def test_input_failure_invalidates_previous_capture(self):
+        self.enable_desktop(); self.tools.screen_at=100
+        with patch('avalon.computer.time.monotonic',return_value=110), patch.object(self.tools,'_desktop') as desktop, patch.object(self.cancel,'wait',return_value=False):
+            desktop.return_value.onScreen.return_value=True
+            desktop.return_value.click.side_effect=OSError('input failed')
+            result=self.call('desktop_click',x=10,y=10)
+        self.assertIn('error',result.data)
+        self.assertIsNone(self.tools.screen_at)
+
 class FakeTools:
     def __init__(self,denied=False): self.calls=[]; self.denied=denied
     def environment(self): return 'test'
@@ -186,3 +268,4 @@ class AgentTests(unittest.TestCase):
         self.assertEqual(recorded[0]['tool_choice'],'auto')
 
 if __name__=='__main__': unittest.main()
+

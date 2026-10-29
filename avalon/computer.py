@@ -48,7 +48,7 @@ class ComputerTools:
     def __init__(self, settings, approvals, opener=webbrowser.open):
         self.settings, self.approvals, self.opener = settings, approvals, opener
         self.roots = tuple(p.expanduser().resolve() for p in (settings.file_roots or (Path.home(),)))
-        self.screen_at = 0.0
+        self.screen_at = None
 
     def environment(self):
         return "Sistema: " + platform.system() + ". Raízes de arquivos: " + json.dumps([str(p) for p in self.roots])
@@ -105,9 +105,9 @@ class ComputerTools:
         self._audit(name,args,"started")
         try:
             result = self._execute(name,args,cancel)
-        except PolicyError:
+        except PolicyError as error:
             self._audit(name,args,"blocked")
-            return Result({"error":"Bloqueado pela política local de arquivos. Não tente outra ferramenta para contornar."},denied=True)
+            return Result({"error":str(error)},denied=True)
         except (OSError, ValueError) as error:
             self._audit(name,args,"failed")
             return Result({"error":type(error).__name__,"message":"Verifique caminho, formato e permissões. A operação não foi confirmada."})
@@ -191,7 +191,7 @@ class ComputerTools:
             return Result({"width":width,"height":height,"coordinate_space":"original pixels"},
                           image='data:image/jpeg;base64,'+base64.b64encode(output.getvalue()).decode())
         if name.startswith('desktop_'):
-            if time.monotonic()-self.screen_at>45: raise ValueError("Capture a tela novamente antes de interagir.")
+            self._require_recent_screen()
             if name=='desktop_type' and (not a['text'].isascii() or len(a['text'])>2000 or any(ord(c)<32 for c in a['text'])):
                 raise ValueError("Digitação aceita apenas ASCII sem caracteres de controle; use write_text para Unicode.")
             desktop=self._desktop()
@@ -199,14 +199,36 @@ class ComputerTools:
             if name=='desktop_hotkey' and not all(key in desktop.KEYBOARD_KEYS for key in a['keys']): raise ValueError("Tecla inválida.")
             if not self._approve(name,a,cancel): return Result({"error":"recusado"},denied=True)
             if cancel.is_set(): return Result({"error":"cancelado"},denied=True)
+            self._require_recent_screen()
             # Allow time to refocus the target app after the approval UI closes.
             if cancel.wait(2): return Result({"error":"cancelado"},denied=True)
+            self._require_recent_screen()
+            # Consume the observation before any input: exceptions may follow partial effects.
+            self.screen_at=None
             if name=='desktop_click': desktop.click(a['x'],a['y'])
-            elif name=='desktop_type': desktop.write(a['text'],interval=.01)
+            elif name=='desktop_type':
+                sent=0
+                for offset in range(0,len(a['text']),8):
+                    if cancel.is_set():
+                        return Result({"error":"cancelado", "input_sent":sent>0,
+                                       "interrupted":True, "characters_sent":sent},denied=True)
+                    chunk=a['text'][offset:offset+8]
+                    desktop.write(chunk,interval=.01)
+                    sent+=len(chunk)
+                if cancel.is_set():
+                    return Result({"error":"cancelado", "input_sent":sent>0,
+                                   "interrupted":True, "characters_sent":sent},denied=True)
+                return Result({"input_sent":True, "characters_sent":sent,
+                               "note":"Capture novamente para verificar o efeito."})
             else: desktop.hotkey(*a['keys'])
-            self.screen_at=0
             return Result({"input_sent":True,"note":"Capture novamente para verificar o efeito."})
         raise ValueError("Ferramenta não implementada.")
+
+    def _require_recent_screen(self):
+        age=None if self.screen_at is None else time.monotonic()-self.screen_at
+        if age is None or not 0<=age<=45:
+            self.screen_at=None
+            raise PolicyError("Capture a tela novamente antes de interagir; a observação está ausente ou expirada.")
 
     def _mutate(self,name,a,cancel):
         source=self._path(a['source'] if name=='move_file' else a['path'])
@@ -280,3 +302,4 @@ class ComputerTools:
             output.seek(0); data=output.read(12000)
         return Result({"exit_code":process.returncode,"output":data.decode('utf-8',errors='replace'),
                        "interrupted":interrupted,"note":"Saída limitada a 12000 bytes; processos destacados podem sobreviver."})
+
