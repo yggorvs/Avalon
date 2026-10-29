@@ -4,13 +4,15 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "avalon-assistant"
-version = "2.0.0"
+version = "2.1.0"
 description = "Assistente pessoal modular para voz e texto"
 requires-python = ">=3.11"
 dependencies = ["openai>=1.55,<3", "python-dotenv>=1,<2"]
 
 [project.optional-dependencies]
 voice = ["faster-whisper>=1.1,<2", "SpeechRecognition>=3.10,<4", "PyAudio>=0.2.14,<0.3", "edge-tts>=7,<8", "pygame>=2.6,<3"]
+
+desktop = ["PyAutoGUI>=0.9.54,<1", "Pillow>=10,<13"]
 
 [project.scripts]
 avalon = "avalon.__main__:main"

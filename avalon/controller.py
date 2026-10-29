@@ -10,9 +10,12 @@ log = logging.getLogger(__name__)
 
 class Controller:
     """One worker owns microphone, inference, TTS and action execution."""
-    def __init__(self, memory, llm, audio, speak=False, executor=None):
+    def __init__(self, memory, llm, audio, speak=False, executor=None, agent=None, agent_enabled=False):
         self.memory, self.llm, self.audio = memory, llm, audio
         self.speak_enabled = speak
+        self.agent = agent
+        self.agent_enabled = agent_enabled
+        self.task_cancel = threading.Event()
         self.router, self.executor = Router(), executor or Executor()
         self.events = Queue()
         self.tasks = Queue(maxsize=8)
@@ -26,6 +29,9 @@ class Controller:
 
     def submit(self, text):
         text = text.strip()
+        if normalize(text) in {"/parar", "parar tarefa", "cancelar tarefa"}:
+            self.stop_task()
+            return True
         if not text: return False
         if len(text) > 8000:
             self.emit("error", "Mensagem muito longa (máximo: 8000 caracteres).")
@@ -82,8 +88,11 @@ class Controller:
                 self.emit("quit", "")
                 return "Encerrando o Avalon."
             return self.executor.execute(command)
-        reply = self.llm.reply(self.memory.context(), text)
-        if self.stop.is_set(): return None
+        if self.agent_enabled and self.agent is not None:
+            reply = self.agent.run(text, self.memory.context(), self.task_cancel)
+        else:
+            reply = self.llm.reply(self.memory.context(), text)
+        if self.stop.is_set() or self.task_cancel.is_set(): return None
         self.memory.append(text, reply)
         return reply
 
@@ -97,11 +106,13 @@ class Controller:
                         active_conversation = False
                         continue
                     kind, text = "wake", ""
+                self.task_cancel.clear()
                 try:
                     if kind != "text":
                         self.emit("status", "Escutando" if kind == "listen" or active_conversation else "Aguardando Avalon")
                         text = self.audio.listen(self.stop)
                         if self.stop.is_set(): break
+                        if self.task_cancel.is_set(): continue
                         if not text: continue
                         if kind == "wake" and not self.wake.is_set(): continue
                         if kind == "wake" and not active_conversation:
@@ -114,7 +125,7 @@ class Controller:
                                 self.emit("assistant", "Estou ouvindo. Diga seu comando.")
                                 continue
                     reply = self._handle(text)
-                    if reply and not self.stop.is_set():
+                    if reply and not self.stop.is_set() and not self.task_cancel.is_set():
                         self.emit("assistant", reply)
                         if self.speak_enabled:
                             self.emit("status", "Falando")
@@ -137,7 +148,18 @@ class Controller:
                 except Exception: pass
             self.emit("closed", "")
 
+    def stop_task(self):
+        self.task_cancel.set()
+        self.wake.clear()
+        self.audio.interrupt()
+        if self.agent is not None: self.agent.tools.approvals.cancel()
+        while True:
+            try: self.tasks.get_nowait()
+            except Empty: break
+        self.emit("info", "Parada solicitada. Ações concluídas não são desfeitas; a requisição de IA atual pode levar até o timeout para retornar.")
+
     def close(self):
         self.stop.set()
+        self.stop_task()
         self.wake.clear()
         self.audio.interrupt()

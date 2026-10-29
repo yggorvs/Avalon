@@ -15,8 +15,8 @@ class App(tk.Tk):
         self.closing = False
         self.angle = 0
         self.title("AVALON • Assistente pessoal")
-        self.geometry("1100x760")
-        self.minsize(840, 620)
+        self.geometry("1180x850")
+        self.minsize(900, 800)
         self.configure(bg=BG)
         self.protocol("WM_DELETE_WINDOW", self.close)
         self.columnconfigure(1, weight=1)
@@ -41,6 +41,14 @@ class App(tk.Tk):
         self.speak = tk.BooleanVar(value=controller.speak_enabled)
         tk.Checkbutton(sidebar, text="Ler respostas em voz alta", variable=self.speak,
             command=lambda: setattr(controller, "speak_enabled", self.speak.get()), bg=PANEL, fg="white", selectcolor=BG, activebackground=PANEL, activeforeground="white").pack(anchor="w")
+        self.agent_mode = tk.BooleanVar(value=controller.agent_enabled)
+        tk.Checkbutton(sidebar, text="Modo agente: usar computador", variable=self.agent_mode,
+            command=self.toggle_agent, bg=PANEL, fg=GOLD, selectcolor=BG,
+            activebackground=PANEL, activeforeground=GOLD).pack(anchor="w", pady=8)
+        ttk.Button(sidebar, text="PARAR TAREFA", command=controller.stop_task).pack(fill="x", pady=5)
+        self.bind("<Escape>", lambda event: controller.stop_task())
+        self.approval_window = None
+        self.approval_id = None
         ttk.Button(sidebar, text="Interromper fala", command=controller.audio.interrupt).pack(fill="x", pady=10)
         ttk.Button(sidebar, text="Comandos disponíveis", command=lambda: controller.submit("ajuda")).pack(fill="x", pady=5)
         tk.Label(sidebar, text="Voz contínua usa o microfone.\nWhisper local • IA no endpoint configurado\nEdge TTS usa internet.\n\nHistórico local em SQLite.\nDigite ‘limpar memória’ para apagar.", justify="left", wraplength=220, bg=PANEL, fg="#91a6be", font=("Segoe UI", 9)).pack(side="bottom", anchor="w", pady=20)
@@ -91,6 +99,13 @@ class App(tk.Tk):
             if kind == "status":
                 if not self.closing: self.status.set(text)
                 self.wake.set(self.controller.wake.is_set())
+            elif kind == "approval":
+                if not self.closing: self.show_approval(text)
+            elif kind == "approval_done":
+                if self.approval_id == text and self.approval_window is not None:
+                    self.approval_window.destroy()
+                    self.approval_window = None
+                    self.approval_id = None
             elif kind == "clear":
                 self.chat.configure(state="normal")
                 self.chat.delete("1.0", "end")
@@ -105,6 +120,42 @@ class App(tk.Tk):
             self.destroy()
             return
         self.after(50, self.poll)
+
+    def toggle_agent(self):
+        self.controller.agent_enabled = self.agent_mode.get()
+        if not self.agent_mode.get(): self.controller.stop_task()
+        self.write("info", "Modo agente ativado. Leituras permitidas podem ser enviadas ao endpoint de IA. Alterações exigem aprovação." if self.agent_mode.get() else "Modo conversa ativado.")
+
+    def show_approval(self, request):
+        window = tk.Toplevel(self)
+        self.approval_window, self.approval_id = window, request["id"]
+        window.title(request["title"])
+        window.geometry("760x570")
+        window.configure(bg=BG)
+        window.transient(self)
+        # Non-modal so the main emergency stop remains accessible.
+        tk.Label(window, text=request["title"], bg=BG, fg=GOLD, font=("Segoe UI",15,"bold")).pack(padx=15,pady=12)
+        tk.Label(window, text="Revise a ação completa. A aprovação vale somente para esta chamada e expira em 120 segundos.", bg=BG, fg="white", wraplength=700).pack(padx=15,pady=5)
+        frame = tk.Frame(window,bg=BG)
+        frame.pack(fill="both",expand=True,padx=15,pady=10)
+        preview = tk.Text(frame,wrap="word",bg=PANEL,fg="white",font=("Consolas",11))
+        scroll = ttk.Scrollbar(frame,command=preview.yview)
+        scroll.pack(side="right",fill="y")
+        preview.pack(side="left",fill="both",expand=True)
+        preview.configure(yscrollcommand=scroll.set)
+        preview.insert("1.0",request["preview"])
+        preview.configure(state="disabled")
+        buttons = tk.Frame(window,bg=BG)
+        buttons.pack(pady=12)
+        def answer(allowed):
+            window.withdraw()
+            self.update_idletasks()
+            self.controller.agent.tools.approvals.resolve(request["id"],allowed)
+            # The event poll closes the window; the worker cannot touch Tk.
+        ttk.Button(buttons,text="Recusar",command=lambda:answer(False)).pack(side="left",padx=10)
+        ttk.Button(buttons,text="Aprovar esta ação",command=lambda:answer(True)).pack(side="left",padx=10)
+        window.protocol("WM_DELETE_WINDOW",lambda:answer(False))
+        window.bind("<Escape>",lambda event:self.controller.stop_task())
 
     def animate(self):
         if self.closing: return

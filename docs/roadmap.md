@@ -9,3 +9,11 @@
 
 Itens desta lista ainda não foram implementados. O núcleo atual é uma base funcional para evolução,
 não uma declaração de que todas as capacidades de um assistente geral já existem.
+
+## Depois do modo agente 2.1
+
+- Validar controle de desktop e function calling no Windows do autor com modelo real.
+- Automatizar navegador por DOM, com perfis e consentimento por ação externa.
+- Identificar janelas e restaurar foco com APIs de acessibilidade do Windows.
+- Detector de wake word dedicado e parada por voz durante a execução.
+- Confinamento de processos para trabalhos de código e rollback mais abrangente.

@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from pathlib import Path
 import os
+import json
 
 @dataclass(frozen=True)
 class Settings:
@@ -12,6 +13,12 @@ class Settings:
     whisper_model: str = "base"
     voice: str = "pt-BR-AntonioNeural"
     speak: bool = False
+    agent_enabled: bool = False
+    shell_enabled: bool = False
+    desktop_enabled: bool = False
+    vision_enabled: bool = False
+    file_roots: tuple[Path, ...] = ()
+    agent_steps: int = 12
 
     @classmethod
     def load(cls):
@@ -23,6 +30,11 @@ class Settings:
         device = os.getenv("AVALON_DEVICE", "auto")
         if device not in {"auto", "cpu", "cuda"}:
             raise ValueError("AVALON_DEVICE deve ser auto, cpu ou cuda.")
+        roots = json.loads(os.getenv("AVALON_FILE_ROOTS", "[]"))
+        if not isinstance(roots, list) or not all(isinstance(p,str) and Path(p).expanduser().is_absolute() for p in roots):
+            raise ValueError("AVALON_FILE_ROOTS deve ser um array JSON de caminhos absolutos.")
+        steps = int(os.getenv("AVALON_AGENT_STEPS", "12"))
+        if not 1 <= steps <= 30: raise ValueError("AVALON_AGENT_STEPS deve ficar entre 1 e 30.")
         return cls(
             data_dir=Path(os.getenv("AVALON_DATA_DIR", str(Path.home()/".avalon"))).expanduser(),
             api_key=os.getenv("AVALON_API_KEY") or os.getenv("NVIDIA_API_KEY", ""),
@@ -30,5 +42,10 @@ class Settings:
             model=os.getenv("AVALON_MODEL", cls.model), device=device,
             whisper_model=os.getenv("AVALON_WHISPER_MODEL", "base"),
             voice=os.getenv("AVALON_VOICE", cls.voice),
+            agent_enabled=os.getenv("AVALON_AGENT", "false").lower()=="true",
+            shell_enabled=os.getenv("AVALON_ALLOW_SHELL", "false").lower()=="true",
+            desktop_enabled=os.getenv("AVALON_ALLOW_DESKTOP", "false").lower()=="true",
+            vision_enabled=os.getenv("AVALON_ALLOW_VISION", "false").lower()=="true",
+            file_roots=tuple(Path(p).expanduser() for p in roots), agent_steps=steps,
             speak=os.getenv("AVALON_SPEAK", "false").lower() == "true",
         )

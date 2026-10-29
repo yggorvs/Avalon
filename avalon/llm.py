@@ -11,20 +11,35 @@ class LanguageModel:
         self.settings = settings
         self.client = None
 
-    def reply(self, context, text):
+    def _client(self):
         if not self.settings.api_key:
             raise ConfigurationError("Configure AVALON_API_KEY no .env. Os comandos locais continuam disponíveis.")
         if self.client is None:
             from openai import OpenAI
             self.client = OpenAI(api_key=self.settings.api_key, base_url=self.settings.base_url,
                                  timeout=25.0, max_retries=1)
-        result = self.client.chat.completions.create(
+        return self.client
+
+    def reply(self, context, text):
+        result = self._client().chat.completions.create(
             model=self.settings.model, messages=[{"role": "system", "content": SYSTEM},
             *context, {"role": "user", "content": text}], temperature=0.4, max_tokens=1000)
         text = result.choices[0].message.content
         if not text or not text.strip():
             raise RuntimeError("O provedor retornou uma resposta vazia.")
         return text.strip()
+
+    def tool_turn(self, messages, schemas):
+        from .agent import Turn
+        result = self._client().chat.completions.create(
+            model=self.settings.model, messages=messages, tools=schemas,
+            tool_choice="auto", temperature=0.2, max_tokens=1600)
+        message = result.choices[0].message
+        calls = [{"id":call.id,"name":call.function.name,"arguments":call.function.arguments}
+                 for call in (message.tool_calls or [])]
+        if not calls and not message.content:
+            raise RuntimeError("O provedor retornou uma resposta vazia ao agente.")
+        return Turn(message.content or "", calls)
 
     def close(self):
         if self.client:
