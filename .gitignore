@@ -1,34 +1,14 @@
-# ==========================================
-# AVALON SYSTEM - ARQUIVOS IGNORADOS PELO GIT
-# ==========================================
-
-# 1. SEGURANÇA (CRÍTICO)
-# Nunca, sob hipótese alguma, suba sua chave de API!
 .env
-
-# 2. AMBIENTE VIRTUAL E DEPENDÊNCIAS
-# Evita subir a pasta pesada de bibliotecas do Python
-venv/
-env/
-ENV/
+.env.*
+!.env.example
 .venv/
-
-# 3. ARQUIVOS COMPILADOS E CACHE DO PYTHON
+venv/
 __pycache__/
-*.pyc
-*.pyo
-*.pyd
-.Python
-
-# 4. ARQUIVOS DE ÁUDIO TEMPORÁRIOS
-# Ignora os áudios que o AVALON grava ou fala, para não sujar o repositório
+*.py[cod]
+*.egg-info/
+build/
+dist/
+*.sqlite3*
 *.wav
 *.mp3
-wake_word_temp.wav
-avalon_voz.mp3
-
-# 5. ARQUIVOS DE SISTEMA E IDE
-# Esconde configurações locais do seu VS Code ou do Windows
-.vscode/
-.DS_Store
-Thumbs.db
+memoria_avalon.json
