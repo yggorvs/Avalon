@@ -102,6 +102,37 @@ class ControllerTests(unittest.TestCase):
     def test_expired_confirmation(self):
         self.ask('olá'); self.ask('limpar memória'); self.c.pending_clear=time.monotonic()-1
         self.assertIn('expirada',self.ask('confirmar')); self.assertTrue(self.memory.context())
+    def test_agent_receives_task_and_controller_stores_final_answer(self):
+        from types import SimpleNamespace
+        calls=[]
+        def run(text,context,cancel):
+            calls.append(text)
+            return 'Tarefa finalizada com ferramentas.'
+        self.c.agent=SimpleNamespace(run=run,tools=SimpleNamespace(approvals=SimpleNamespace(cancel=lambda:None)))
+        self.c.agent_enabled=True
+        self.assertIn('ferramentas',self.ask('organize meus arquivos'))
+        self.assertEqual(calls,['organize meus arquivos'])
+        self.assertEqual(self.llm.calls,[])
+        self.assertEqual(self.memory.context()[-1]['content'],'Tarefa finalizada com ferramentas.')
+    def test_emergency_stop_reaches_running_agent(self):
+        from types import SimpleNamespace
+        entered=Event()
+        def run(text,context,cancel):
+            entered.set()
+            cancel.wait(2)
+            return 'should not be saved after stop'
+        self.c.agent=SimpleNamespace(run=run,tools=SimpleNamespace(approvals=SimpleNamespace(cancel=lambda:None)))
+        self.c.agent_enabled=True
+        self.c.submit('tarefa longa')
+        self.assertTrue(entered.wait(1))
+        self.c.submit('/parar')
+        deadline=time.monotonic()+2
+        while time.monotonic()<deadline:
+            try: kind,text=self.c.events.get(timeout=.1)
+            except Empty: continue
+            if kind=='status' and text=='Pronto': break
+        self.assertEqual(self.memory.context(),[])
+        self.assertFalse(self.c.wake.is_set())
     def test_notes_tasks_stay_local(self):
         self.assertIn('Nota', self.ask('salvar nota Reunião na escola'))
         self.assertIn('Reunião na escola', self.ask('listar notas'))

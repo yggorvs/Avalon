@@ -26,3 +26,13 @@ Não há thread adicional para wake word; assim botão e vigilante nunca acessam
 A interface pode enfileirar no máximo oito tarefas. Desativar voz descarta captura passiva ainda em curso.
 Texto já enfileirado pode aguardar a captura terminar. Encerramento descarta tarefas pendentes,
 aguarda operação atual e fecha recursos no worker. O Tk continua processando eventos nesse período.
+
+## Agente de computador (2.1)
+
+`Controller → Agent → LanguageModel.tool_turn → ComputerTools → Approvals → UI/CLI`
+
+O modo agente usa chamadas estruturadas de funções, validação local, limites de etapas/prazo e
+resultados observáveis. Aprovações são resolvidas fora do modelo e vinculadas a um identificador único.
+`ComputerTools` aplica raízes e bloqueios de credenciais para arquivos; comandos aprovados de terminal
+não são sandboxados. `PARAR TAREFA` usa um evento separado do encerramento da aplicação.
+Veja docs/agent.md para capacidades, dados enviados ao modelo e limites reais de interrupção.

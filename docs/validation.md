@@ -34,3 +34,15 @@ Não existem medições de desempenho ou garantia de disponibilidade do modelo r
 Referências de adaptadores: [Faster Whisper](https://github.com/SYSTRAN/faster-whisper),
 [SDK OpenAI](https://github.com/openai/openai-python),
 [Edge TTS](https://github.com/rany2/edge-tts).
+
+## Incremento 2.1 — agente de computador
+
+47 testes locais aprovados, incluindo execução de um processo inofensivo real de terminal no Linux,
+chamadas de ferramenta simuladas, recusa/expiração de aprovação, limites do agente, bloqueio de raízes
+e symlinks, arquivos sensíveis, backups, escrita recusada, alterações concorrentes, movimentação sem
+sobrescrita, registro sem conteúdo e exigência de observação recente para controle visual.
+
+Não validado neste ambiente: GUI de aprovação em tela, mouse/teclado e captura reais, visão remota,
+function calling com modelo real ou comandos PowerShell em PC do autor. O teste de terminal usa
+PowerShell quando executado na matriz Windows da CI. Testes de symlink podem ser pulados por falta
+de permissão no Windows. A matriz remota será verificada na publicação do incremento.

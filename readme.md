@@ -1,7 +1,15 @@
-# AVALON 2
+# AVALON 2.1
 
 Assistente pessoal desktop em português, reconstruído com núcleo modular, texto e voz,
 comandos explícitos, memória SQLite e interface dourada/verde.
+
+## Agente de computador
+
+A nova versão também pode planejar e executar tarefas com ferramentas locais: listar e ler arquivos,
+criar/substituir texto com backup, mover arquivos, abrir apps, executar terminal e observar/interagir
+com o monitor principal. Ative com `python -m avalon --agent` ou pelo botão da interface.
+Ferramentas de terminal e tela exigem configuração adicional, e ações sensíveis exibem aprovação.
+Use **PARAR TAREFA** para interromper. Leia o [guia do agente](docs/agent.md) antes de habilitar tela e terminal.
 
 ## Instalação no Windows (Python 3.11 ou 3.12)
 
@@ -56,9 +64,10 @@ A interface é uma animação Canvas; não é um holograma físico nem um render
 - `adicionar tarefa <texto>`, `listar tarefas`, `concluir tarefa <número>` (até 50 pendências)
 - `dormir`, `encerrar conversa`, `desligar o sistema` (fecha o aplicativo)
 
-Perguntas comuns vão para a IA. O modelo não executa ferramentas: somente o roteador local
-pode executar os comandos acima. Ações não são inferidas de respostas do modelo.
-Não há controle residencial, leitura de arquivos, pesquisa com leitura da web ou execução arbitrária de código.
+Perguntas comuns vão para a IA. No modo conversa, somente o roteador local executa os comandos acima. No modo agente, o modelo
+pode propor ferramentas estruturadas; o aplicativo valida os argumentos e as aprovações antes de
+executar. Há leitura de arquivos e terminal opcional. Controle residencial e busca com leitura da web
+ainda não foram implementados.
 
 ## Memória e privacidade
 
@@ -87,7 +96,8 @@ não há lockfile de ambiente reproduzível nem distribuição executável nesta
 Cancelar fala não cancela uma requisição já enviada ao provedor. Fechar a janela aguarda a
 operação atual: captura tem limites, mas carregamento inicial do modelo e drivers externos podem demorar.
 Erros técnicos são resumidos na interface; logs não incluem texto de conversa, chaves ou payloads remotos.
-Não há promessa de informações atuais: a IA não pesquisa a web.
+Não há pesquisa com leitura da web: abrir URLs não é ler fontes. O modo agente pode observar dados locais
+atuais usando ferramentas; ele depende de um modelo compatível com function calling e, para tela, visão.
 
 Veja [arquitetura](docs/architecture.md), [validação](docs/validation.md) e [próximas etapas](docs/roadmap.md).
 O projeto não recebeu uma nova licença nesta reconstrução; os termos de distribuição devem ser definidos pelo autor.

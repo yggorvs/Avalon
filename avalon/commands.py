@@ -17,6 +17,7 @@ HELP = """Comandos locais:
 • limpar memória (exige confirmação)
 • salvar nota <texto> / listar notas
 • adicionar tarefa <texto> / listar tarefas / concluir tarefa <número>
+• parar tarefa / cancelar tarefa (ou botão PARAR TAREFA / Esc)
 • ajuda
 Use o botão Ouvir para um comando, ou Ativar voz para escuta contínua com 'Avalon'."""
 
