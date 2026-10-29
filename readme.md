@@ -1,7 +1,15 @@
-# AVALON 2.1
+# AVALON 2.2
 
 Assistente pessoal desktop em português, reconstruído com núcleo modular, texto e voz,
 comandos explícitos, memória SQLite e interface dourada/verde.
+
+
+## Bolinha flutuante
+
+A interface abre como um núcleo dourado em pixel art, com raios verdes e vermelhos, sempre visível
+sobre as janelas normais. Arraste para mover; clique para conversar; clique duas vezes para ouvir;
+botão direito abre opções, tamanho, parada e saída. Fechar a conversa mantém a bolinha ativa.
+Aprovações de ações continuam em uma janela própria. Veja o [guia da bolinha](docs/floating-orb.md).
 
 ## Agente de computador
 
@@ -101,3 +109,4 @@ atuais usando ferramentas; ele depende de um modelo compatível com function cal
 
 Veja [arquitetura](docs/architecture.md), [validação](docs/validation.md) e [próximas etapas](docs/roadmap.md).
 O projeto não recebeu uma nova licença nesta reconstrução; os termos de distribuição devem ser definidos pelo autor.
+

@@ -35,6 +35,7 @@ def main():
     from .computer import ComputerTools
     from .agent import Agent
     controller = Controller(memory, LanguageModel(settings), audio, settings.speak)
+    controller.memory_path = settings.data_dir / "memory.sqlite3"
     approvals = Approvals(controller.emit)
     controller.agent = Agent(controller.llm, ComputerTools(settings, approvals), controller.emit,
                              max_steps=settings.agent_steps)
@@ -76,3 +77,4 @@ def main():
             controller.close()
 
 if __name__ == "__main__": main()
+

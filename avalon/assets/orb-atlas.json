@@ -1,0 +1,12 @@
+{
+  "image": "orb-atlas.png",
+  "columns": 4,
+  "rows": 4,
+  "states": {
+    "idle": {"row": 0, "frame_ms": 220},
+    "listening": {"row": 1, "frame_ms": 130},
+    "working": {"row": 2, "frame_ms": 110},
+    "speaking": {"row": 2, "frame_ms": 150},
+    "alert": {"row": 3, "frame_ms": 160}
+  }
+}

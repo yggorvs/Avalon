@@ -1,6 +1,7 @@
 # Correções antes da nova interface
 
-Este incremento mantém a interface atual. A bolinha flutuante e seus sprites não fazem parte dele.
+As correções descritas aqui foram integradas antes da interface flutuante. A versão 2.2 mantém essas
+proteções e adapta os smoke tests para a bolinha e o painel de conversa.
 
 ## Capturas de tela
 
@@ -34,6 +35,6 @@ Compilação de `avalon` e `tests` sem erros. A validação da GUI depende da ex
 Os testes não usam API, microfone, mouse ou teclado reais do usuário. Testes de input de desktop usam
 adaptadores simulados; os testes de terminal existentes executam somente um comando inofensivo local.
 
-Isso não valida transparência, drag-and-drop ou sprites da futura interface; essas verificações pertencem
-à integração posterior. O foco da janela de destino do agente ainda precisa ser conferido pelo usuário,
+Os testes de captura e digitação não validam, por si só, os sprites ou a interface;
+consulte docs/floating-orb.md para a cobertura adicionada na versão 2.2. O foco da janela de destino do agente ainda precisa ser conferido pelo usuário,
 conforme o guia do agente; a validade temporal da captura não garante que a tela permaneceu igual.
