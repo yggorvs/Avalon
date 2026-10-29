@@ -88,12 +88,14 @@ Somente o monitor principal é capturado. A imagem não é salva em disco pelo A
 endpoint de IA configurado, que tem sua própria política de retenção. A aprovação pode mostrar dados
 sensíveis: feche-os antes. A captura anterior é removida do contexto ao chegar uma nova.
 Cada ação invalida a observação anterior; o agente deve capturar novamente para verificar o efeito.
-Uma observação expira em 45 segundos. A tela pode mudar nesse intervalo: confira a prévia e o app
+Uma observação expira em 45 segundos e é validada novamente após a aprovação e a pausa para refocar.
+A observação é consumida antes de enviar o primeiro input, inclusive quando esse input falha. A tela pode mudar nesse intervalo: confira a prévia e o app
 em foco. Após aprovar, há 2 segundos para focar a janela de destino.
 
 O controle usa PyAutoGUI com fail-safe ativado (mover o mouse ao canto superior esquerdo interrompe
 uma chamada de controle). Não interaja com as janelas do Avalon através das ferramentas do agente.
-A digitação é limitada a ASCII sem caracteres de controle; para arquivos em português use write_text.
+A digitação é limitada a ASCII sem caracteres de controle e ocorre em blocos de até oito caracteres,
+com verificação de parada entre blocos; caracteres já enviados não são desfeitos. Para arquivos em português use write_text.
 Não há OCR local, automação DOM do navegador, suporte garantido a múltiplos monitores nem bypass de UAC.
 O controle visual ainda exige validação em um PC real e modelo multimodal compatível.
 
@@ -114,3 +116,4 @@ Arquivos externos podem conter instruções maliciosas. O prompt marca essas obs
 não confiáveis, e ações sensíveis exigem revisão humana; isso reduz risco, sem garantir que o modelo
 identifique toda manipulação. Não existe porta de rede aberta, autoexecução no Windows ou acesso
 remoto ao computador nesta implementação.
+

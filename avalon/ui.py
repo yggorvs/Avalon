@@ -14,6 +14,8 @@ class App(tk.Tk):
         self.controller = controller
         self.closing = False
         self.angle = 0
+        self.poll_timer = None
+        self.animation_timer = None
         self.title("AVALON • Assistente pessoal")
         self.geometry("1180x850")
         self.minsize(900, 800)
@@ -75,7 +77,7 @@ class App(tk.Tk):
         self.entry.focus_set()
         ttk.Button(body, text="Enviar mensagem  ↵", command=self.send).grid(row=3, column=0, sticky="e")
         self.write("assistant", "Olá! Sou o Avalon. Você pode conversar por texto ou clicar em Ouvir. Digite ‘ajuda’ para conhecer os comandos locais. A IA precisa de configuração no .env.")
-        self.after(50, self.poll)
+        self.poll_timer = self.after(50, self.poll)
         self.animate()
 
     def write(self, kind, text):
@@ -93,6 +95,9 @@ class App(tk.Tk):
         return "break"
 
     def poll(self):
+        if self.poll_timer is not None:
+            self.after_cancel(self.poll_timer)
+            self.poll_timer = None
         for _ in range(100):
             try: kind, text = self.controller.events.get_nowait()
             except Empty: break
@@ -119,7 +124,7 @@ class App(tk.Tk):
         if self.closing and not self.controller.thread.is_alive():
             self.destroy()
             return
-        self.after(50, self.poll)
+        self.poll_timer = self.after(50, self.poll)
 
     def toggle_agent(self):
         self.controller.agent_enabled = self.agent_mode.get()
@@ -167,7 +172,7 @@ class App(tk.Tk):
         pulse = 29 + math.sin(self.angle/15)*3
         self.orb.create_oval(110-pulse,105-pulse,110+pulse,105+pulse,outline=GOLD,width=2)
         self.orb.create_text(110,105,text="A",fill=GOLD,font=("Segoe UI",24,"bold"))
-        self.after(40,self.animate)
+        self.animation_timer = self.after(40,self.animate)
 
     def close(self):
         if self.closing: return
@@ -175,3 +180,14 @@ class App(tk.Tk):
         self.entry.configure(state="disabled")
         self.status.set("Encerrando… aguardando operação atual")
         self.controller.close()
+
+
+    def destroy(self):
+        self.closing = True
+        for name in ("poll_timer", "animation_timer"):
+            timer = getattr(self, name, None)
+            if timer is not None:
+                try: self.after_cancel(timer)
+                except tk.TclError: pass
+                setattr(self, name, None)
+        super().destroy()
